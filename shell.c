@@ -15,7 +15,7 @@ char** parse(){
 
 	if (!(line&&parsed&&cur)) perror("Error when reading line");
 
-	while (line){
+	while (*line){
 		char c=line[0];
 		if (c=='\n'){
 			break;
@@ -41,7 +41,7 @@ char** parse(){
 	}
 
 	free(cur);
-	printf("%s\n",line);
+	printf("%s\n",original_line);
 	free(original_line);
 
 	return parsed;
