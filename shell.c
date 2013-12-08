@@ -4,7 +4,7 @@
 
 char** parse(){
 	char* line=malloc(sizeof(char)*(LINE_MAX+1));
-	line=fgets(line, LINE_MAX+1, stdin);
+	fgets(line, LINE_MAX+1, stdin);
 	char** parsed=malloc(sizeof(char*)*(TOK_MAX+1));
 	char* cur=malloc(sizeof(char)*(LINE_MAX+1));
 	int counter=0;
@@ -34,7 +34,8 @@ char** parse(){
 		else {
 			int i=strlen(cur);
 			cur[i]=c;
-			cur[i+1]=0;		}
+			cur[i+1]=0;		
+		}
 		line++;
 	}
 
