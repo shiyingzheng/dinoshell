@@ -4,7 +4,8 @@
 
 char** parse(){
 	char* line=malloc(sizeof(char)*(LINE_MAX+1));
-	fgets(line, LINE_MAX+1, stdin);
+	char* original_line=line;
+	line=fgets(line, LINE_MAX+1, stdin);
 	char** parsed=malloc(sizeof(char*)*(TOK_MAX+1));
 	char* cur=malloc(sizeof(char)*(LINE_MAX+1));
 	int counter=0;
@@ -12,7 +13,7 @@ char** parse(){
 	line[0]=0;
 	parsed[0]=0;
 
-	if (!line) perror("Error when reading line");
+	if (!(line&&parsed&&cur)) perror("Error when reading line");
 
 	while (line){
 		char c=line[0];
@@ -40,7 +41,8 @@ char** parse(){
 	}
 
 	free(cur);
-	free(line);
+	printf("%s\n",line);
+	free(original_line);
 
 	return parsed;
 }
