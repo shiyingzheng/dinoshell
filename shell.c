@@ -8,21 +8,35 @@ void free_list_of_strings(char** list){
 	}
 	free(list);
 }
-char** parse(){
+char** parse(int * argcountptr){
 	char* line=malloc(sizeof(char)*(LINE_MAX+1));
 	char* original_line=line;
 	line[0]=0;
-	line=fgets(line, LINE_MAX+1, stdin);
+	if(!fgets(line, LINE_MAX+1, stdin)){
+		free(line);
+		return NULL;
+	}
 	char** parsed=malloc(sizeof(char*)*(TOK_MAX+1));
 	char* cur=malloc(sizeof(char)*(LINE_MAX+1));
 	int counter=0;
 	cur[0]=0;
 	parsed[0]=0;
-
-	if (!(line&&parsed&&cur)) perror("Error when reading line");
+	if(!line){
+		free(parsed);
+		free(cur);
+		free(line);
+	}
+	if (!(parsed&&cur)) perror("Ran out of memory");
 	//printf("%s\n",line);
+
 	while (*line){
 		char c=line[0];
+		if(c==EOF){
+			*argcountptr=EOF;
+			free_list_of_strings(parsed);
+			free(original_line);
+			return NULL;
+		}
 		if (c=='\n'){
 			if(cur[0]){
 				parsed[counter]=cur;
@@ -60,15 +74,39 @@ char** parse(){
 	parsed[counter]=NULL;
 	//printf("%s\n",original_line);
 	free(original_line);
+	*argcountptr=counter;
 	return parsed;
 }
 
 int main() {
 	int done=0;
+	pid_t child;
+	int argcount;
 	while(!done){
-		char** strings=parse();
-		if(!strcmp(strings[0],"exit")) done=1;
-		free_list_of_strings(strings);
+		char** strings=parse(&argcount);
+		if(!strings) done=1;
+		else if(!strings[0]);
+		else if(!strcmp(strings[0],"exit")) done=1;
+		else{
+			child=fork();
+			if ( -1 == child ) {
+			    perror("fork failed, I am sad");
+			    return(2);
+			}
+			if(child){
+				int status;
+				pid_t deadchild = wait(&status);
+			}
+			else{
+				if(execvp(*strings,strings)){
+					//printf("Sorry I failed sucks for you\n");
+					perror("");
+					return(2);
+				}
+			}
+		}
+		if(strings)
+			free_list_of_strings(strings);
 	}
 	/*for(int i=0;strings[i];i++){
 		printf("%s\n",strings[i]);
