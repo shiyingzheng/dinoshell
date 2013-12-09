@@ -77,13 +77,49 @@ char** parse(int * argcountptr){
 	*argcountptr=counter;
 	return parsed;
 }
+/*
+int execute(char** strings, int strcount){
+	char* argv[strcount];
+	int argcounter=0;
+	argv[0]=0;
+	
+	for (int i=0;i<strcount;i++){
 
+		if (!strcmp(strings[i],">")){
+			FILE* file=fopen(strings[i+1],"w");
+			dup2(STDOUT_FILENO, file);
+			fclose(file);
+			i++;
+		}
+		else if (!strcmp(strings[i],"<")){
+			FILE* file=fopen(strings[i+1],"r");
+			dup2(file, STDIN_FILENO);
+			fclose(file);
+			i++;
+		}
+		else if (!strcmp(strings[i],"|")){
+
+		}
+		else if (!strcmp(string[i],"&")){
+			
+		}
+		else{
+			argv[argcounter]=strings[i];
+			argcounter++;
+			argv[argcounter]=0;
+		}
+	}
+}
+*/
+void sig_handler(int sig){
+	if (sig==SIGINT) {}//kill child
+}
 int main() {
 	int done=0;
 	pid_t child;
-	int argcount;
+	int strcount;
 	while(!done){
-		char** strings=parse(&argcount);
+		char** strings=parse(&strcount);
 		if(!strings) done=1;
 		else if(!strings[0]);
 		else if(!strcmp(strings[0],"exit")) done=1;
@@ -94,15 +130,18 @@ int main() {
 			    return(2);
 			}
 			if(child){
+				signal(SIGINT, SIG_IGN);
 				int status;
 				pid_t deadchild = wait(&status);
 			}
 			else{
+				//execute(strings,strcount);
 				if(execvp(*strings,strings)){
-					//printf("Sorry I failed sucks for you\n");
+					//printf("Sorry I failed sucks for you\n")
 					perror("");
 					return(2);
 				}
+				pause();
 			}
 		}
 		if(strings)
