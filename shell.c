@@ -65,20 +65,6 @@ char** parse(int * argcountptr){
 			curcounter=0;
 			cur[0]=0;
 		}
-		else if( c=='<' || c=='>' || c=='|' || c=='&'){
-			parsed[counter]=cur;
-			cur=malloc(sizeof(char)*(LINE_MAX+1));
-			if(!cur) perror("out of memory");
-			curcounter=0;
-			cur[0]=0;
-			counter++;
-			char* shortstring=malloc(sizeof(char)+1);
-			if(!shortstring) perror("out of memory");
-			shortstring[0]=c;
-			shortstring[1]=0;
-			parsed[counter]=shortstring;
-			counter++;
-		}
 		else {
 			cur[curcounter]=c;
 			curcounter++;
@@ -110,53 +96,85 @@ void sig_handler(int sig){
 	}//kill child
 	signal(sig, sig_handler);
 }
-char** grouping(int strcount, char** strings, int* groupcount){
-	char** grouped=malloc(sizeof(char*)*(strcount+1));
-	int counter=0;
-	grouped[0]=malloc(sizeof(char)*(LINE_MAX+1));
-	grouped[0][0]=0;
+char*** grouping(int strcount, char** strings, int* groupcount){
+	char*** grouped=malloc(sizeof(char**)*(strcount+1));
+	int group_num=0;
+	int string_num=0;
+	grouped[0]=malloc(sizeof(char*)*(strcount+1));
+	grouped[0][0]=malloc(sizeof(char)*(LINE_MAX+1));
+	if (!grouped[0] || !grouped[0][0]) perror("No memory for grouping");
+	grouped[0][0][0]=0;
 	for (int i=0;i<strcount;i++){
 		char* cur=strings[i];
-		if (!strcmp(cur,"<") || !strcmp(cur, ">") || !strcmp(cur, "|")) {
-			counter++;
-			grouped[counter]=malloc(sizeof(char)*(LINE_MAX+1));
-			grouped[counter][0]=0;
-			strcpy(grouped[counter],cur);
-			counter++;
-			grouped[counter]=malloc(sizeof(char)*(LINE_MAX+1));
-			grouped[counter][0]=0;
+		if ( !strcmp(cur, "<") || !strcmp(cur, ">") || !strcmp(cur, "|") ){
+			grouped[group_num][string_num]=0;
+			group_num++;
+			string_num=0;
+			grouped[group_num]=malloc(sizeof(char*)*(strcount+1));
+			grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1));
+			if (!grouped[group_num] || !grouped[group_num][string_num]) perror("No memory for grouping");
+			grouped[group_num][string_num][0]=0;
+			strcpy(grouped[group_num][string_num],cur);
+			grouped[group_num][string_num+1]=0;
+			group_num++;
+			grouped[group_num]=malloc(sizeof(char*)*(strcount+1));
+			if (!grouped[group_num]) perror("No memory for grouping");
+			grouped[group_num][string_num][0]=0;
 		}
 		else{
-			strcat(grouped[counter],cur);
+			grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1));
+			if (!grouped[group_num][string_num]) perror("No memory for grouping");
+			grouped[group_num][string_num][0]=0;
+			strcpy(grouped[group_num][string_num],cur);
+			string_num++;
 		}
 	}
-	*groupcount=counter+1;
+	*groupcount=group_num+1;
 	return grouped;
 }
 pid_t execprocess(int strcount,char** strings){
 	pid_t pid=getpid();
 	arraylist_addEnd(stack,&pid);
-	//if(execvp(*strings,strings)){
-	//	pid_t* currentprocess=arraylist_removeEnd(stack);
-	//	free(currentprocess);
-	//	perror("");
-	//	return(2);
-	//}
-	//pause();
+	int groupcount;
+	char*** grouped=grouping(strcount, strings, &groupcount);
+	char** command=malloc(sizeof(char*)*strcount);
+	char* file=malloc(sizeof(char)*(LINE_MAX+1));
+	for (int i=0; i<groupcount; i++){
+		if ( !strcmp(grouped[0], "<") ){
+			//open the file using open() (please man it)
+			//dup the thing on the right of < to stdin like dup2("meow", STDIN_FILENO)
+			//and then execute the command
+			//and clean the command
+			//check this out http://stackoverflow.com/questions/14543443/in-c-how-do-you-redirect-stdin-stdout-stderr-to-files-when-making-an-execvp-or
+		}
+		else if ( !strcmp(grouped[0], ">")){
+			//open the file
+			//dup the thing on the right of > to stdout like dup2("meow", STDOUT_FILENO)
+			//and then execute the command
+			//and clean the command
+		}
+		else if ( !strcmp(grouped[0], "|") ){
+			//From kuperman: should have STDIN_FILENO of bar be reading from the STDOUT_FILENO of bar. 
+			//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
+			//Close the unused ends 
+			//(e.g., foo should close the descriptor that bar is using to read). Your shell will need to exec both processes and wait for both of them to return.
+			//there's a very nice example here http://www6.uniovi.es/cscene/CS4/CS4-06.html
+		}
+		else{
+			//put it onto the command buffer
+		}
+	}
+	//if command is not empty at the end, execute it
+	//also, every time when executing stuff, check if there's any error, i.e. if exec returns -1, then we should perror.
+	pause();
 	pid_t* currentprocess=arraylist_removeEnd(stack);
 	free(currentprocess);
 	return pid;
 }
 int main() {
-	int strcount;
-	int groupcount;
-	char** strings=parse(&strcount);
-	char** grouped=grouping(strcount, strings, &groupcount);
-	printf("strcount %d groupcount %d", strcount, groupcount);
-	for (int i=0; i<groupcount;i++){
-		printf("%s\n", grouped[i]);
-	}
-	/*signal(SIGINT, sig_handler);
+	//Test the grouping method again before using it! Sorry I was too tired to do that. We also need a method to free memory from char***
+	/*
+	signal(SIGINT, sig_handler);
 	stack=arraylist_init(sizeof(pid_t),5);
 	pid_t pid=getpid();
 	root=pid;
@@ -179,6 +197,7 @@ int main() {
 			}
 			if(child){
 				int status;
+				//If the last thing on the command line is &, use waitpid(child, &status, WNOHANG) instead
 				//if (!strcmp(strings[strcount-1], "&")){
 				//	pid_t deadchild = waitpid(child, &status, WNOHANG);
 				//}
@@ -189,7 +208,7 @@ int main() {
 			else {
 				int ex=execprocess(strcount,strings);
 				if (-1==ex) 
-					fprintf(stderr, "Child process not successfully executed");
+					perror("Child process not successfully executed");
 				pid_t p=getpid();
 			}
 		}
