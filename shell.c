@@ -183,7 +183,7 @@ int main() {
 	int done=0;
 	int strcount;
 	while(!done){
-		printf("\n%d\n",getpid());
+		//printf("\n%d\n",getpid());
 		printf("%s",prompt);
 		char** strings=parse(&strcount);
 		if(!strings||!strcmp(strings[0],"exit")) done=1;
