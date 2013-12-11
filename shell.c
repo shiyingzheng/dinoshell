@@ -193,6 +193,7 @@ int main() {
 			if ( -1 == child ) {
 	    		perror("fork failed, I am sad");
 	    		return(2);
+
 			}
 			if(child){
 				int status;
@@ -203,12 +204,13 @@ int main() {
 				//else{
 				pid_t deadchild = waitpid(child, &status, 0);
 				//}
-				child=-1;
+				child=0;
 			}
 			else {
 				int ex=execprocess(strcount,strings);
 				if (-1==ex) 
 					perror("Child process not successfully executed");
+				return(2);
 			}
 		}
 		if(strings)
