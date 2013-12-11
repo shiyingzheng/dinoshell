@@ -134,6 +134,18 @@ char*** grouping(int strcount, char** strings, int* groupcount){
 }
 pid_t execprocess(int strcount,char** strings){
 	pid_t pid=getpid();
+    arraylist_addEnd(stack,&pid);
+    if(execvp(*strings,strings)){
+        pid_t* currentprocess=arraylist_removeEnd(stack);
+        free(currentprocess);
+        perror("");
+        return(2);
+	}
+	pause();
+	pid_t* currentprocess=arraylist_removeEnd(stack);
+	free(currentprocess);
+	return pid;
+	/*pid_t pid=getpid();
 	arraylist_addEnd(stack,&pid);
 	int groupcount;
 	char*** grouped=grouping(strcount, strings, &groupcount);
@@ -169,11 +181,11 @@ pid_t execprocess(int strcount,char** strings){
 	pause();
 	pid_t* currentprocess=arraylist_removeEnd(stack);
 	free(currentprocess);
-	return pid;
+	return pid;*/
 }
 int main() {
 	//Test the grouping method again before using it! Sorry I was too tired to do that. We also need a method to free memory from char***
-	/*
+	
 	signal(SIGINT, sig_handler);
 	stack=arraylist_init(sizeof(pid_t),5);
 	pid_t pid=getpid();
@@ -215,5 +227,5 @@ int main() {
 		if(strings)
 			free_list_of_strings(strings);
 	}
-	arraylist_free(stack);*/
+	arraylist_free(stack);
 }
