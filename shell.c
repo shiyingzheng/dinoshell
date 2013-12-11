@@ -28,8 +28,7 @@ char** parse(int * argcountptr){
 		free(cur);
 		free(line);
 	}
-	if (!(parsed&&cur)) perror("Ran out of memory");
-	//printf("%s\n",line);
+	if (!(parsed&&cur)) perror("Ran out of memory");;
 
 	while (*line){
 		char c=line[0];
@@ -60,7 +59,6 @@ char** parse(int * argcountptr){
 		}
 		else if ( c==' ' ){
 			parsed[counter]=cur;
-			//printf("%s\n",cur);
 			cur=malloc(sizeof(char)*(LINE_MAX+1));
 			if(!cur) perror("out of memory");
 			counter++;
@@ -88,12 +86,12 @@ char** parse(int * argcountptr){
 		line++;
 	}
 	parsed[counter]=NULL;
-	//printf("%s\n",original_line);
 	free(original_line);
 	*argcountptr=counter;
 	return parsed;
 }
 void child_handler(int sig){
+	printf("kill me");
 	pid_t pid=getpid();
 	kill(pid, SIGTERM);
 }
@@ -104,8 +102,10 @@ void sig_handler(int sig){
 	if (sig==SIGINT) {
 		pid_t mypid=getpid();
 		pid_t curprocess=*(pid_t*)arraylist_get(stack,arraylist_size(stack)-1);
-		if(mypid==curprocess && root!=curprocess) signal(SIGINT,child_handler);
-		else signal(SIGINT,parent_handler);
+		if(mypid==curprocess && root!=curprocess) 
+			signal(SIGINT,child_handler);
+		else 
+			signal(SIGINT,parent_handler);
 	}//kill child
 	signal(sig, sig_handler);
 }
@@ -147,12 +147,13 @@ int main() {
 			}
 			if(child){
 				int status;
-				pid_t deadchild = wait(&status);
+				pid_t deadchild = waitpid(-1, &status, 0);
 			}
 			else {
 				int ex=execprocess(strcount,strings);
 				if (-1==ex) 
 					fprintf(stderr, "Child process not successfully executed");
+				pid_t p=getpid();
 			}
 		}
 		if(strings)
