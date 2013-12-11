@@ -109,22 +109,52 @@ void sig_handler(int sig){
 	}//kill child
 	signal(sig, sig_handler);
 }
+char** grouping(int strcount, char** strings, int* groupcount){
+	char** grouped=malloc(sizeof(char*)*(strcount+1));
+
+	int counter=0;
+	grouped[0]=malloc(sizeof(char)*(LINE_MAX+1));
+	grouped[0][0]=0;
+	for (int i=0;i<strcount;i++){
+		char* cur=strings[i];
+		if (strcmp(cur,"<") || strcmp(cur, ">") || strcmp(cur, "|")) {
+			counter++;
+			grouped[counter]=malloc(sizeof(char)*(LINE_MAX+1));
+			grouped[counter][0]=0;
+			strcpy(grouped[counter],cur);
+			counter++;
+		}
+		else{
+			strcat(grouped[counter],cur);
+		}
+	}
+	*groupcount=counter;
+	return grouped;
+}
 pid_t execprocess(int strcount,char** strings){
 	pid_t pid=getpid();
 	arraylist_addEnd(stack,&pid);
-	if(execvp(*strings,strings)){
-		pid_t* currentprocess=arraylist_removeEnd(stack);
-		free(currentprocess);
-		perror("");
-		return(2);
-	}
-	pause();
+	//if(execvp(*strings,strings)){
+	//	pid_t* currentprocess=arraylist_removeEnd(stack);
+	//	free(currentprocess);
+	//	perror("");
+	//	return(2);
+	//}
+	//pause();
 	pid_t* currentprocess=arraylist_removeEnd(stack);
 	free(currentprocess);
 	return pid;
 }
 int main() {
-	signal(SIGINT, sig_handler);
+	int strcount;
+	int groupcount;
+	char** strings=parse(&strcount);
+	char** grouped=grouping(strcount, strings, &groupcount);
+	printf("strcount %d groupcount %d", strcount, groupcount);
+	for (int i=0; i<groupcount;i++){
+		printf("%s\n", grouped[i]);
+	}
+	/*signal(SIGINT, sig_handler);
 	stack=arraylist_init(sizeof(pid_t),5);
 	pid_t pid=getpid();
 	root=pid;
@@ -147,7 +177,12 @@ int main() {
 			}
 			if(child){
 				int status;
-				pid_t deadchild = waitpid(-1, &status, 0);
+				//if (!strcmp(strings[strcount-1], "&")){
+				//	pid_t deadchild = waitpid(child, &status, WNOHANG);
+				//}
+				//else{
+					pid_t deadchild = waitpid(-1, &status, 0);
+				//}
 			}
 			else {
 				int ex=execprocess(strcount,strings);
@@ -159,5 +194,5 @@ int main() {
 		if(strings)
 			free_list_of_strings(strings);
 	}
-	arraylist_free(stack);
+	arraylist_free(stack);*/
 }
