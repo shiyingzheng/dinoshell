@@ -127,9 +127,18 @@ int execute(char** strings, int strcount){
 */
 arraylist* stack;
 int ischild=0;
+void child_handler(int sig){
+	printf("\n");
+}
+void parent_handler(int sig){
+	signal(SIGINT,SIG_IGN);
+}
 void sig_handler(int sig){
 	if (sig==SIGINT) {
-		kill(*(pid_t*)arraylist_get(stack,arraylist_size(stack)-1),SIGKILL);
+		pid_t mypid=getpid();
+		pid_t curprocess=*(pid_t*)arraylist_get(stack,arraylist_size(stack)-1);
+		if(mypid==curprocess) signal(SIGINT,child_handler);
+		else signal(SIGINT,parent_handler);
 	}//kill child
 }
 pid_t execprocess(int strcount,char** strings){
@@ -139,11 +148,11 @@ pid_t execprocess(int strcount,char** strings){
 	    return(2);
 	}
 	if(child){
-		signal(SIGINT, sig_handler);
 		int status;
 		pid_t deadchild = wait(&status);
 	}
 	else{
+		signal(SIGINT, sig_handler);
 		pid_t pid=getpid();
 		arraylist_addEnd(stack,&pid);
 		//execute(strings,strcount);
@@ -161,6 +170,7 @@ pid_t execprocess(int strcount,char** strings){
 	return child;
 }
 int main() {
+	signal(SIGINT, sig_handler);
 	stack=arraylist_init(sizeof(pid_t),5);
 	pid_t pid=getpid();
 	arraylist_addEnd(stack,&pid);
