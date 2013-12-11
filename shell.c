@@ -73,6 +73,7 @@ char** parse(int * argcountptr){
 			cur[0]=0;
 			counter++;
 			char* shortstring=malloc(sizeof(char)+1);
+			if(!shortstring) perror("out of memory");
 			shortstring[0]=c;
 			shortstring[1]=0;
 			parsed[counter]=shortstring;
@@ -111,24 +112,25 @@ void sig_handler(int sig){
 }
 char** grouping(int strcount, char** strings, int* groupcount){
 	char** grouped=malloc(sizeof(char*)*(strcount+1));
-
 	int counter=0;
 	grouped[0]=malloc(sizeof(char)*(LINE_MAX+1));
 	grouped[0][0]=0;
 	for (int i=0;i<strcount;i++){
 		char* cur=strings[i];
-		if (strcmp(cur,"<") || strcmp(cur, ">") || strcmp(cur, "|")) {
+		if (!strcmp(cur,"<") || !strcmp(cur, ">") || !strcmp(cur, "|")) {
 			counter++;
 			grouped[counter]=malloc(sizeof(char)*(LINE_MAX+1));
 			grouped[counter][0]=0;
 			strcpy(grouped[counter],cur);
 			counter++;
+			grouped[counter]=malloc(sizeof(char)*(LINE_MAX+1));
+			grouped[counter][0]=0;
 		}
 		else{
 			strcat(grouped[counter],cur);
 		}
 	}
-	*groupcount=counter;
+	*groupcount=counter+1;
 	return grouped;
 }
 pid_t execprocess(int strcount,char** strings){
