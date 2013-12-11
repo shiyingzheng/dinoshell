@@ -202,7 +202,9 @@ int main() {
 				//	pid_t deadchild = waitpid(child, &status, WNOHANG);
 				//}
 				//else{
-				pid_t deadchild = waitpid(child, &status, 0);
+				while(child!=wait(&status)){
+					;
+				}
 				//}
 				child=0;
 			}
