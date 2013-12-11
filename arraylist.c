@@ -69,7 +69,7 @@ arraylist* arraylist_init(int sizeOfType, int initialCapacity){
  */
 void arraylist_addEnd(arraylist *list, void* itemPtr){
 	arraylist_add(list,list->size,itemPtr);
-	arraylist_print(list,arraylist_printInt);
+	//arraylist_print(list,arraylist_printInt);
 }
 /*
  * adds a copy of the item at itemPtr to the list at position index
@@ -95,7 +95,6 @@ void arraylist_add(arraylist *list,int index, void* itemPtr){
  */
 void* arraylist_removeEnd(arraylist *list){
 	return arraylist_remove(list,list->size-1);
-	arraylist_print(list,arraylist_printInt);
 }
 /* removes the item at the specified index and returns a pointer to it.
  * the pointer is malloc'd and should be freed.
@@ -111,6 +110,7 @@ void* arraylist_remove(arraylist *list, int index){
 	memcpy(element,position,list->element_size);
 	memmove(position,position+list->element_size,list->element_size*(list->size-index-1));
 	--list->size;
+	//arraylist_print(list,arraylist_printInt);
 	return element;
 }
 /*
