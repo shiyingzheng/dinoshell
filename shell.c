@@ -1,7 +1,7 @@
 /*Shiying Zheng and Ben Stern hw10*/
 
 #include "shell.h"
-arraylist* stack;
+pid_t child=-1;
 pid_t root;
 void free_list_of_strings(char** list){
 	for(int i=0;list[i];++i){
@@ -87,12 +87,10 @@ void parent_handler(int sig){
 }
 void sig_handler(int sig){
 	if (sig==SIGINT) {
-		pid_t mypid=getpid();
-		pid_t curprocess=*(pid_t*)arraylist_get(stack,arraylist_size(stack)-1);
-		if(mypid==curprocess && root!=curprocess) 
-			signal(SIGINT,child_handler);
-		else 
+		if(child)
 			signal(SIGINT,parent_handler);
+		else
+			signal(SIGINT,child_handler);
 	}//kill child
 	signal(sig, sig_handler);
 }
@@ -133,18 +131,12 @@ char*** grouping(int strcount, char** strings, int* groupcount){
 	return grouped;
 }
 pid_t execprocess(int strcount,char** strings){
-	pid_t pid=getpid();
-    arraylist_addEnd(stack,&pid);
     if(execvp(*strings,strings)){
-        pid_t* currentprocess=arraylist_removeEnd(stack);
-        free(currentprocess);
         perror("");
         return(2);
 	}
 	pause();
-	pid_t* currentprocess=arraylist_removeEnd(stack);
-	free(currentprocess);
-	return pid;
+	return getpid();
 	/*pid_t pid=getpid();
 	arraylist_addEnd(stack,&pid);
 	int groupcount;
@@ -187,22 +179,17 @@ int main() {
 	//Test the grouping method again before using it! Sorry I was too tired to do that. We also need a method to free memory from char***
 	
 	signal(SIGINT, sig_handler);
-	stack=arraylist_init(sizeof(pid_t),5);
-	pid_t pid=getpid();
-	root=pid;
-	arraylist_addEnd(stack,&pid);
 	char* prompt="dinoshell: ";
 	int done=0;
-	pid_t child;
 	int strcount;
 	while(!done){
+		printf("\n%d\n",getpid());
 		printf("%s",prompt);
 		char** strings=parse(&strcount);
-		if(!strings || !strings[0]) printf("\n");
-		else if(!strcmp(strings[0],"exit")) 
-			done=1;
+		if(!strings||!strcmp(strings[0],"exit")) done=1;
+		else if(!strings[0]) printf("\n");
 		else{
-			pid_t child=fork();
+			child=fork();
 			if ( -1 == child ) {
 	    		perror("fork failed, I am sad");
 	    		return(2);
@@ -214,18 +201,17 @@ int main() {
 				//	pid_t deadchild = waitpid(child, &status, WNOHANG);
 				//}
 				//else{
-					pid_t deadchild = waitpid(-1, &status, 0);
+				pid_t deadchild = waitpid(child, &status, 0);
 				//}
+				child=-1;
 			}
 			else {
 				int ex=execprocess(strcount,strings);
 				if (-1==ex) 
 					perror("Child process not successfully executed");
-				pid_t p=getpid();
 			}
 		}
 		if(strings)
 			free_list_of_strings(strings);
 	}
-	arraylist_free(stack);
 }

@@ -69,7 +69,6 @@ arraylist* arraylist_init(int sizeOfType, int initialCapacity){
  */
 void arraylist_addEnd(arraylist *list, void* itemPtr){
 	arraylist_add(list,list->size,itemPtr);
-	//arraylist_print(list,arraylist_printInt);
 }
 /*
  * adds a copy of the item at itemPtr to the list at position index
@@ -110,7 +109,6 @@ void* arraylist_remove(arraylist *list, int index){
 	memcpy(element,position,list->element_size);
 	memmove(position,position+list->element_size,list->element_size*(list->size-index-1));
 	--list->size;
-	//arraylist_print(list,arraylist_printInt);
 	return element;
 }
 /*
