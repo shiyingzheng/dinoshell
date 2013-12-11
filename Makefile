@@ -7,3 +7,4 @@ shell: shell.c arraylist.o
 	clang -g -pedantic -std=c99 -o shell shell.c arraylist.o
 
 clean:
+	rm -f shell arraylist.o
