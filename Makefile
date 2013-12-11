@@ -1,6 +1,6 @@
-all: shell
+all: shell arraylist.o
 
-arraylist: arraylist.c
+arraylist.o: arraylist.c
 	clang -c arraylist.c
 
 shell: shell.c arraylist.o
