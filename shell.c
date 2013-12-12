@@ -249,6 +249,37 @@ pid_t execprocess(int strcount,char** strings){
 			//and clean the command
 			}
 			else if ( !strcmp(grouped[i][0], "|") ){
+				if(i<1){
+					fprintf(stderr, "%s\n", "No such file or directory");
+					return -1;
+				}
+				char** command2;
+				command=grouped[i-1];
+				if(!*command){
+					fprintf(stderr, "%s\n", "No such file or directory");
+					return -1;
+				}
+				if(!grouped[i+1]){
+					fprintf(stderr, "%s\n", "No such file or directory");
+					return -1;
+				}
+				command2=grouped[i+1];
+				int filedes1[2],filedes2[2];
+				if (pipe(filedes1) == -1){
+      				perror ("pipe");
+      				return -1;
+    			}
+    			if (pipe(filedes2) == -1){
+      				perror ("pipe");
+      				return -1;
+    			}
+    			dup2(filedes1[1],filedes2[0]);
+				if(execvp(*command,command)){
+        			perror("");
+        			return(2);
+				}
+				pause();
+				return getpid();
 			//From kuperman: should have STDIN_FILENO of bar be reading from the STDOUT_FILENO of bar. 
 			//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
 			//Close the unused ends 
