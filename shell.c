@@ -131,49 +131,81 @@ char*** grouping(int strcount, char** strings, int* groupcount){
 	return grouped;
 }
 pid_t execprocess(int strcount,char** strings){
-    if(execvp(*strings,strings)){
+    /*if(execvp(*strings,strings)){
         perror("");
         return(2);
 	}
 	pause();
-	return getpid();
-	/*pid_t pid=getpid();
-	arraylist_addEnd(stack,&pid);
+	return getpid();*/
+	pid_t pid=getpid();
 	int groupcount;
 	char*** grouped=grouping(strcount, strings, &groupcount);
-	char** command=malloc(sizeof(char*)*strcount);
-	char* file=malloc(sizeof(char)*(LINE_MAX+1));
-	for (int i=0; i<groupcount; i++){
-		if ( !strcmp(grouped[0], "<") ){
+	char** command;//=malloc(sizeof(char*)*strcount);
+	char* file;
+	if(groupcount<2){
+		printf("**grouped is %s",**grouped);
+		if(execvp(**grouped,*grouped)){
+        	perror("");
+        	return(2);
+		}
+		pause();
+		return getpid();
+	}
+	else{
+		for (int i=0; i<groupcount; i++){
+			if ( !strcmp(grouped[i][0], "<") ){
+				if(i<1){
+					fprintf(stderr, "%s\n", "No such file or directory");
+					return -1;
+				}
+				command=grouped[i-1];
+				if(!*command){
+					fprintf(stderr, "%s\n", "No such file or directory");
+					return -1;
+				}
+				if(!grouped[i+1]){
+					fprintf(stderr, "%s\n", "No such file or directory");
+					return -1;
+				}
+				int j;
+				for(j=0;grouped[i+1][j];j++){
+					;
+				}
+				file=grouped[i+1][j-1];
+				int f=fileno(fopen(file,"r"));
+				printf("I'm here hi");
+				dup2(f,STDIN_FILENO);
+				if(execvp(*command,command)){
+        			perror("");
+        			return(2);
+				}
+				pause();
+				return getpid();
 			//open the file using open() (please man it)
 			//dup the thing on the right of < to stdin like dup2("meow", STDIN_FILENO)
 			//and then execute the command
 			//and clean the command
 			//check this out http://stackoverflow.com/questions/14543443/in-c-how-do-you-redirect-stdin-stdout-stderr-to-files-when-making-an-execvp-or
-		}
-		else if ( !strcmp(grouped[0], ">")){
+			}
+			else if ( !strcmp(grouped[i][0], ">")){
 			//open the file
 			//dup the thing on the right of > to stdout like dup2("meow", STDOUT_FILENO)
 			//and then execute the command
 			//and clean the command
-		}
-		else if ( !strcmp(grouped[0], "|") ){
+			}
+			else if ( !strcmp(grouped[i][0], "|") ){
 			//From kuperman: should have STDIN_FILENO of bar be reading from the STDOUT_FILENO of bar. 
 			//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
 			//Close the unused ends 
 			//(e.g., foo should close the descriptor that bar is using to read). Your shell will need to exec both processes and wait for both of them to return.
 			//there's a very nice example here http://www6.uniovi.es/cscene/CS4/CS4-06.html
-		}
-		else{
-			//put it onto the command buffer
+			}
 		}
 	}
 	//if command is not empty at the end, execute it
 	//also, every time when executing stuff, check if there's any error, i.e. if exec returns -1, then we should perror.
 	pause();
-	pid_t* currentprocess=arraylist_removeEnd(stack);
-	free(currentprocess);
-	return pid;*/
+	return pid;
 }
 int main() {
 	//Test the grouping method again before using it! Sorry I was too tired to do that. We also need a method to free memory from char***
