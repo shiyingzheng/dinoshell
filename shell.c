@@ -94,41 +94,60 @@ void sig_handler(int sig){
 	}//kill child
 	signal(sig, sig_handler);
 }
+void print_groups(char*** groups){
+	for(int i=0;groups[i];i++){
+		printf("[");
+		for(int j=0;groups[i][j];j++){
+			printf("\"%s\",",groups[i][j]);
+		}
+		printf("]");
+	}
+	printf("\n");
+}
+void print_strings(char** strings){
+	for(int i=0;strings[i];i++){
+		printf("\"%s\",",strings[i]);
+	}
+	printf("\n");
+}
 char*** grouping(int strcount, char** strings, int* groupcount){
 	char*** grouped=malloc(sizeof(char**)*(strcount+1));
+	//print_strings(strings);
 	int group_num=0;
 	int string_num=0;
-	grouped[0]=malloc(sizeof(char*)*(strcount+1));   
-	grouped[0][0]=malloc(sizeof(char)*(LINE_MAX+1));   
-	if (!grouped[0] || !grouped[0][0]) perror("No memory for grouping");
-	grouped[0][0][0]=0;
-	for (int i=0;i<strcount;i++){
+	grouped[group_num]=malloc(sizeof(char*)*(strcount+1));   
+	grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1)); 
+	if (!grouped[group_num] || !grouped[group_num][string_num]) fprintf(stderr,"No memory for grouping");
+	for (int i=0;strings[i];i++){
 		char* cur=strings[i];
+		if(!cur[0]) continue;
 		if ( !strcmp(cur, "<") || !strcmp(cur, ">") || !strcmp(cur, "|") ){
-			group_num++;
+			grouped[group_num][string_num]=0;//making the last string in the group null
+			group_num++;//incrementing the group
 			string_num=0;
-			grouped[group_num]=malloc(sizeof(char*)*(strcount+1));  
-			grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1));   
-			if (!grouped[group_num] || !grouped[group_num][string_num]) perror("No memory for grouping");
-			grouped[group_num][string_num][0]=0;
-			strcpy(grouped[group_num][string_num],cur);
-			grouped[group_num][string_num+1]=0;
-			group_num++;
-			grouped[group_num]=malloc(sizeof(char*)*(strcount+1));  
-			grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1));  
-			if (!grouped[group_num] || !grouped[group_num][string_num]) perror("No memory for grouping");
-			grouped[group_num][string_num][0]=0;
+			grouped[group_num]=malloc(sizeof(char*)*(strcount+1));
+			grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1)); //creating the first string in the group
+			if (!grouped[group_num] || !grouped[group_num][string_num]) fprintf(stderr,"No memory for grouping");
+			grouped[group_num][string_num][0]=0;//making the first string the the group an empty string
+			strcpy(grouped[group_num][string_num],cur);//copying the < > | into the string
+			grouped[group_num][string_num+1]=0;//making the second string in the group null
+			group_num++;//making a new group
+			grouped[group_num]=0;//making it null;
 		}
 		else{
-			if (!grouped[group_num][string_num]) perror("No memory for grouping");
-			strcpy(grouped[group_num][string_num],cur);
-			string_num++;
+			if (!grouped[group_num]){ 
+				grouped[group_num]=malloc(sizeof(char*)*(strcount+1)); 
+			}
 			grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1)); 
-			grouped[group_num][string_num][0]=0;
+			if (!grouped[group_num][string_num]) fprintf(stderr,"No memory for grouping");
+			strcpy(grouped[group_num][string_num],cur);//copying the string from strings into grouped
+			string_num++;
 		}
 	}
-	grouped[group_num][string_num++]=0;
-	*groupcount=group_num+1;
+	grouped[group_num][string_num]=0;
+	group_num++;//making a new group which should be null
+	grouped[group_num]=0;
+	*groupcount=group_num;
 	return grouped;
 }
 pid_t execprocess(int strcount,char** strings){
@@ -141,10 +160,11 @@ pid_t execprocess(int strcount,char** strings){
 	pid_t pid=getpid();
 	int groupcount;
 	char*** grouped=grouping(strcount, strings, &groupcount);
+	//print_groups(grouped);
 	char** command;//=malloc(sizeof(char*)*strcount);
 	char* file;
 	if(groupcount<2){
-		printf("**grouped is %s",**grouped);
+		//printf("**grouped is %s",**grouped);
 		if(execvp(**grouped,*grouped)){
         	perror("");
         	return(2);
@@ -153,7 +173,7 @@ pid_t execprocess(int strcount,char** strings){
 		return getpid();
 	}
 	else{
-		printf("%d ", groupcount);
+		//printf("%d ", groupcount);
 		for (int i=0; i<groupcount; i++){
 			if ( !strcmp(grouped[i][0], "<") ){
 				if(i<1){
@@ -174,9 +194,12 @@ pid_t execprocess(int strcount,char** strings){
 					;
 				}
 				file=grouped[i+1][j-1];
+				//printf("command %s file %s\n",*command,file);
 				int f=fileno(fopen(file,"r"));
-				printf("I'm here hi");
+				//printf("%d\n",f);
+				//printf("I'm here hi");
 				dup2(f,STDIN_FILENO);
+				close(f);
 				if(execvp(*command,command)){
         			perror("");
         			return(2);
@@ -190,6 +213,36 @@ pid_t execprocess(int strcount,char** strings){
 			//check this out http://stackoverflow.com/questions/14543443/in-c-how-do-you-redirect-stdin-stdout-stderr-to-files-when-making-an-execvp-or
 			}
 			else if ( !strcmp(grouped[i][0], ">")){
+				if(i<1){
+					fprintf(stderr, "%s\n", "No such file or directory");
+					return -1;
+				}
+				command=grouped[i-1];
+				if(!*command){
+					fprintf(stderr, "%s\n", "No such file or directory");
+					return -1;
+				}
+				if(!grouped[i+1]){
+					fprintf(stderr, "%s\n", "No such file or directory");
+					return -1;
+				}
+				int j;
+				for(j=0;grouped[i+1][j];j++){
+					;
+				}
+				file=grouped[i+1][j-1];
+				//printf("command %s file %s\n",*command,file);
+				int f=fileno(fopen(file,"w"));
+				//printf("%d\n",f);
+				//printf("I'm here hi");
+				dup2(f,STDOUT_FILENO);
+				close(f);
+				if(execvp(*command,command)){
+        			perror("");
+        			return(2);
+				}
+				pause();
+				return getpid();
 			//open the file
 			//dup the thing on the right of > to stdout like dup2("meow", STDOUT_FILENO)
 			//and then execute the command
