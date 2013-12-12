@@ -98,35 +98,36 @@ char*** grouping(int strcount, char** strings, int* groupcount){
 	char*** grouped=malloc(sizeof(char**)*(strcount+1));
 	int group_num=0;
 	int string_num=0;
-	grouped[0]=malloc(sizeof(char*)*(strcount+1));
-	grouped[0][0]=malloc(sizeof(char)*(LINE_MAX+1));
+	grouped[0]=malloc(sizeof(char*)*(strcount+1));   
+	grouped[0][0]=malloc(sizeof(char)*(LINE_MAX+1));   
 	if (!grouped[0] || !grouped[0][0]) perror("No memory for grouping");
 	grouped[0][0][0]=0;
 	for (int i=0;i<strcount;i++){
 		char* cur=strings[i];
 		if ( !strcmp(cur, "<") || !strcmp(cur, ">") || !strcmp(cur, "|") ){
-			grouped[group_num][string_num]=0;
 			group_num++;
 			string_num=0;
-			grouped[group_num]=malloc(sizeof(char*)*(strcount+1));
-			grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1));
+			grouped[group_num]=malloc(sizeof(char*)*(strcount+1));  
+			grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1));   
 			if (!grouped[group_num] || !grouped[group_num][string_num]) perror("No memory for grouping");
 			grouped[group_num][string_num][0]=0;
 			strcpy(grouped[group_num][string_num],cur);
 			grouped[group_num][string_num+1]=0;
 			group_num++;
-			grouped[group_num]=malloc(sizeof(char*)*(strcount+1));
-			if (!grouped[group_num]) perror("No memory for grouping");
+			grouped[group_num]=malloc(sizeof(char*)*(strcount+1));  
+			grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1));  
+			if (!grouped[group_num] || !grouped[group_num][string_num]) perror("No memory for grouping");
 			grouped[group_num][string_num][0]=0;
 		}
 		else{
-			grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1));
 			if (!grouped[group_num][string_num]) perror("No memory for grouping");
-			grouped[group_num][string_num][0]=0;
 			strcpy(grouped[group_num][string_num],cur);
 			string_num++;
+			grouped[group_num][string_num]=malloc(sizeof(char)*(LINE_MAX+1)); 
+			grouped[group_num][string_num][0]=0;
 		}
 	}
+	grouped[group_num][string_num++]=0;
 	*groupcount=group_num+1;
 	return grouped;
 }
@@ -152,6 +153,7 @@ pid_t execprocess(int strcount,char** strings){
 		return getpid();
 	}
 	else{
+		printf("%d ", groupcount);
 		for (int i=0; i<groupcount; i++){
 			if ( !strcmp(grouped[i][0], "<") ){
 				if(i<1){
@@ -218,8 +220,9 @@ int main() {
 		//printf("\n%d\n",getpid());
 		printf("%s",prompt);
 		char** strings=parse(&strcount);
-		if(!strings||!strcmp(strings[0],"exit")) done=1;
-		else if(!strings[0]) printf("\n");
+		if(!strings) done=1;
+		else if(!strings[0]) ;
+		else if (!strcmp(strings[0],"exit")) done=1;
 		else{
 			child=fork();
 			if ( -1 == child ) {
