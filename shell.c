@@ -148,48 +148,49 @@ char*** grouping(int strcount, char** strings, int* groupcount){
 	*groupcount=group_num;
 	return grouped;
 }
-pid_t multipipe(int groupcount, char*** grouped, int pipe2[2]){
-			if(!grouped[0]){
-				return(0);
+pid_t multipipe(int groupcount, char*** grouped){
+		char** command;
+		int i=0;
+		pid_t child2;
+		int* p=malloc((groupcount-1)*sizeof(int));
+		for(int j=0;j<(groupcount-1)/2;++j){
+			if(pipe(p+2*j)<0){
+				perror("");
+				return(2);
 			}
-			char** command;
-			command=grouped[0];
-			//print_strings(command);
-			//print_strings(command2);
-			int newpipe[2];
-			if (pipe(newpipe) == -1){
-  				perror ("pipe");
-  				return -1;
-			}
-			pid_t child2=fork();
-			if(child2==-1){
-				perror("fork failed, I am sad");
-    			return(2);
+		}
+		while((command=grouped[2*i])!=NULL){
+			if((child2=fork())==-1){
+				perror("");
+				return(2);
 			}
 			if(child2){
-				dup2(pipe2[0],STDIN_FILENO);
 				int status;
 				while(child2!=wait(&status)){
-					//printf("%d\n",status);
 					;
 				}
-				int ex=multipipe(groupcount-2,grouped+2,newpipe);
-
-					if (-1==ex) 
-					perror("Child process not successfully executed");
-					return(2);
-				pause();
+				i++;
 			}
 			else{
-				dup2(newpipe[1],STDOUT_FILENO);
-				if(execvp(*command,command)){
-    				perror("");
-    				return(2);
-    			}
-    			pause();
-				return getpid();
+				if(i!=0){
+					if(dup2(p[2*i-2],STDIN_FILENO)<0){
+						perror("");
+						return(2);
+					}
+				}
+				else if(i<(groupcount-1)/2){
+					if(dup2(p[2*i+1],STDOUT_FILENO)<0){
+						perror("");
+						return(2);
+					}
+				}
+				//print_strings(command);
+				execvp(*command,command);
+				perror("");
 			}
-			return getpid();
+		}
+		free(p);
+		return getpid();
 		//From kuperman: should have STDIN_FILENO of bar be reading from the STDOUT_FILENO of bar. 
 		//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
 		//Close the unused ends 
@@ -303,6 +304,8 @@ pid_t execprocess(int strcount,char** strings){
 				}
 				char** command2;
 				command=grouped[i-1];
+				//print_groups(grouped);
+				//printf("%d\n",i);
 				if(!*command){
 					fprintf(stderr, "%s\n", "No such file or directory");
 					return -1;
@@ -311,18 +314,9 @@ pid_t execprocess(int strcount,char** strings){
 					fprintf(stderr, "%s\n", "No such file or directory");
 					return -1;
 				}
-				int newpipe[2];
-				if(pipe(newpipe)==-1){
-					perror("pipe");
-					return -1;
-				}
-				dup2(newpipe[0],STDIN_FILENO);
-				int s=multipipe(groupcount-i,grouped+i,newpipe);
-				if(execvp(*command,command)){
-        			perror("");
-        			return(2);
-				}
-				return getpid();
+				int s=multipipe(groupcount-i,grouped+i-1);
+				if(s) perror("");
+				return s;
 			//From kuperman: should have STDIN_FILENO of bar be reading from the STDOUT_FILENO of bar. 
 			//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
 			//Close the unused ends 
