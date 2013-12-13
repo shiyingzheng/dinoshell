@@ -67,12 +67,12 @@ char** parse(int * argcountptr){
 			cur[0]=0;
 		}
 		else if( c=='<' || c=='>' || c=='|' || c=='&'){ //we can do things like "cat <a.txt" or "cat meow.txt|grep ruff"! 
-            parsed[counter]=cur;
-            cur=malloc(sizeof(char)*(LINE_MAX+1));
+        	parsed[counter]=cur; //put the current word into line buffer
+            cur=malloc(sizeof(char)*(LINE_MAX+1)); //make a new word!
             if(!cur) perror("out of memory");
-            curcounter=0;
-            cur[0]=0;
-            counter++;
+            curcounter=0; //counter for the current word set back to 0
+            cur[0]=0; 
+            counter++; //counter for the location in parsed
             char* shortstring=malloc(sizeof(char)+1);
             if(!shortstring) perror("out of memory");
             shortstring[0]=c;
@@ -342,7 +342,6 @@ int main() {
 		//printf("\n%d\n",getpid());
 		printf("%s",prompt);
 		char** strings=parse(&strcount);
-		printf("%d\n", strcount );
 		if(!strings) done=1;
 		else if(!strings[0]) ;
 		else if (!strcmp(strings[0],"exit")) done=1;
