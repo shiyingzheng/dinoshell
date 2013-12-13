@@ -1,14 +1,24 @@
-/*Shiying Zheng and Ben Stern hw10*/
+/*
+ * A dinoshell.
+ * Shiying Zheng and Ben Stern hw10
+ */
 
 #include "shell.h"
 pid_t child=-1;
 pid_t root;
+/*
+ * Freeing the parsed array of strings taken in.
+ */
 void free_list_of_strings(char** list){
 	for(int i=0;list[i];++i){
 		free(list[i]);
 	}
 	free(list);
 }
+/*
+ * Parse arguments. Take in a pointer to an integer to store the number of arguments.
+ * Returns a pointer to a character pointer as the array of strings.
+ */
 char** parse(int * argcountptr){
 	char* line=malloc(sizeof(char)*(LINE_MAX+1)); //the line buffer
 	char* original_line=line; //a pointer to the start of the line buffer so that we can free the buffer later
@@ -92,6 +102,9 @@ char** parse(int * argcountptr){
 	*argcountptr=counter;
 	return parsed;
 }
+/*
+ * Testing method, used to print out groups of arguments seperated by <, >, or |.
+ */
 void print_groups(char*** groups){
 	for(int i=0;groups[i];i++){
 		printf("[");
@@ -102,12 +115,22 @@ void print_groups(char*** groups){
 	}
 	printf("\n");
 }
+/*
+ * Testing method, used to print out the array of strings in a line.
+ */
 void print_strings(char** strings){
 	for(int i=0;strings[i];i++){
 		printf("\"%s\",",strings[i]);
 	}
 	printf("\n");
 }
+/*
+ * Groups strings between >, <, or |.
+ * Takes in an integer for the number of strings in the character array, 
+ * 	a pointer to a character array, and a pointer to an integer to store 
+ *	the number of groups in.
+ * Returns a pointer to an array of character array.
+ */
 char*** grouping(int strcount, char** strings, int* groupcount){
 	char*** grouped=malloc(sizeof(char**)*(strcount+1));
 	//print_strings(strings);
@@ -148,6 +171,12 @@ char*** grouping(int strcount, char** strings, int* groupcount){
 	*groupcount=group_num;
 	return grouped;
 }
+/*
+ * This method is supposed to take care of multi-piping. It is now not working.
+ * Takes in an integer for the number of groups of strings, a pointer to an
+ * 	array of strings as the groups, and an integer array that are used for piping.
+ * Returns the child-id if exec fails.
+ */
 pid_t multipipe(int groupcount, char*** grouped, int pipe2[2]){
 			if(!grouped[0]){
 				return(0);
@@ -194,25 +223,21 @@ pid_t multipipe(int groupcount, char*** grouped, int pipe2[2]){
 		//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
 		//Close the unused ends 
 		//(e.g., foo should close the descriptor that bar is using to read). Your shell will need to exec both processes and wait for both of them to return.
-		//there's a very nice example here http://www6.uniovi.es/cscene/CS4/CS4-06.htmld
-//if command is not empty at the end, execute it
-//also, every time when executing stuff, check if there's any error, i.e. if exec returns -1, then we should perror.
+		//if command is not empty at the end, execute it
+		//also, every time when executing stuff, check if there's any error, i.e. if exec returns -1, then we should perror.
 }
+/*
+ * Execute process.
+ * Takes in an integer as the number of strings, and a pointer to character arrays.
+ * Returns process id if exec fails.
+ */
 pid_t execprocess(int strcount,char** strings){
-    /*if(execvp(*strings,strings)){
-        perror("");
-        return(2);
-	}
-	pause();
-	return getpid();*/
 	pid_t pid=getpid();
 	int groupcount;
 	char*** grouped=grouping(strcount, strings, &groupcount);
-	//print_groups(grouped);
-	char** command;//=malloc(sizeof(char*)*strcount);
+	char** command;
 	char* file;
 	if(groupcount<2){
-		//printf("**grouped is %s",**grouped);
 		if(execvp(**grouped,*grouped)){
         	perror("");
         	return(2);
@@ -221,7 +246,6 @@ pid_t execprocess(int strcount,char** strings){
 		return getpid();
 	}
 	else{
-		//printf("%d ", groupcount);
 		for (int i=0; i<groupcount; i++){
 			if ( !strcmp(grouped[i][0], "<") ){
 				if(i<1){
@@ -242,10 +266,7 @@ pid_t execprocess(int strcount,char** strings){
 					;
 				}
 				file=grouped[i+1][j-1];
-				//printf("command %s file %s\n",*command,file);
 				int f=fileno(fopen(file,"r"));
-				//printf("%d\n",f);
-				//printf("I'm here hi");
 				dup2(f,STDIN_FILENO);
 				close(f);
 				if(execvp(*command,command)){
@@ -258,7 +279,7 @@ pid_t execprocess(int strcount,char** strings){
 			//dup the thing on the right of < to stdin like dup2("meow", STDIN_FILENO)
 			//and then execute the command
 			//and clean the command
-			//check this out http://stackoverflow.com/questions/14543443/in-c-how-do-you-redirect-stdin-stdout-stderr-to-files-when-making-an-execvp-or
+			//some ideas from http://stackoverflow.com/questions/14543443/in-c-how-do-you-redirect-stdin-stdout-stderr-to-files-when-making-an-execvp-or
 			}
 			else if ( !strcmp(grouped[i][0], ">")){
 				if(i<1){
@@ -323,7 +344,7 @@ pid_t execprocess(int strcount,char** strings){
 			//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
 			//Close the unused ends 
 			//(e.g., foo should close the descriptor that bar is using to read). Your shell will need to exec both processes and wait for both of them to return.
-			//there's a very nice example here http://www6.uniovi.es/cscene/CS4/CS4-06.html
+			//some ideas from http://www6.uniovi.es/cscene/CS4/CS4-06.html
 			}
 		}
 	}
@@ -333,39 +354,42 @@ pid_t execprocess(int strcount,char** strings){
 	return pid;
 }
 int main() {
-	//Test the grouping method again before using it! Sorry I was too tired to do that. We also need a method to free memory from char***
 	signal(SIGINT,SIG_IGN);
-	char* prompt="dinoshell: ";
+	char* prompt="dinoshell: "; 
 	int done=0;
 	int strcount;
 	while(!done){
-		//printf("\n%d\n",getpid());
-		printf("%s",prompt);
-		char** strings=parse(&strcount);
+		printf("%s",prompt); //print the prompt
+		char** strings=parse(&strcount); //parse words on the current line
 		if(!strings) done=1;
 		else if(!strings[0]) ;
 		else if (!strcmp(strings[0],"exit")) done=1;
 		else{
-			child=fork();
+			child=fork(); //make a child process
 			if ( -1 == child ) {
 	    		perror("fork failed, I am sad");
 	    		return(2);
 			}
-			if(child){
+			if(child){ //I am a parent because I have a child
 				int status;
-				//If the last thing on the command line is &, use waitpid(child, &status, WNOHANG) instead
-				//if (!strcmp(strings[strcount-1], "&")){
-				//	pid_t deadchild = waitpid(child, &status, WNOHANG);
-				//}
-				//else{
-				while(child!=wait(&status)){
-					;
+				if (!strcmp(strings[strcount-1], "&")){
+					//If the last thing on the command line is &, use waitpid(child, &status, WNOHANG) instead
+					while(waitpid(child, &status, WNOHANG)>0);
 				}
-				//}
+				else{
+					//otherwise, just wait for the child to finish
+					while(child!=wait(&status)){
+						;
+					}
+				}
 				child=-1;
 			}
-			else {
-				signal(SIGINT,SIG_DFL);
+			else { //I am a child
+				if (!strcmp(strings[strcount-1], "&")) { //crops off the & at the end if there is any
+					free(strings[strcount-1]);
+					strings[strcount-1]=NULL;
+				}
+				signal(SIGINT,SIG_DFL); //we do want ctrl-c to kill a child, so set behavior back to default
 				int ex=execprocess(strcount,strings);
 				if (-1==ex) 
 					perror("Child process not successfully executed");
