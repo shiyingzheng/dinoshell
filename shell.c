@@ -10,36 +10,37 @@ void free_list_of_strings(char** list){
 	free(list);
 }
 char** parse(int * argcountptr){
-	char* line=malloc(sizeof(char)*(LINE_MAX+1));
-	char* original_line=line;
-	line[0]=0;
-	if(!fgets(line, LINE_MAX+1, stdin)){
+	char* line=malloc(sizeof(char)*(LINE_MAX+1)); //the line buffer
+	char* original_line=line; //a pointer to the start of the line buffer so that we can free the buffer later
+	line[0]=0; 
+	if(!fgets(line, LINE_MAX+1, stdin)){ //the line has EOF, we try to exit the program
 		free(line);
 		return NULL;
 	}
-	char** parsed=malloc(sizeof(char*)*(TOK_MAX+1));
-	char* cur=malloc(sizeof(char)*(LINE_MAX+1));
-	int counter=0;
-	int curcounter=0;
-	cur[curcounter]=0;
+	char** parsed=malloc(sizeof(char*)*(TOK_MAX+1)); //an array of strings to put in the words/symbols from the line
+	char* cur=malloc(sizeof(char)*(LINE_MAX+1)); //a buffer for the current word
+	int counter=0; //a counter for the location we are pointing to in parsed
+	int curcounter=0; //a counter for the location we are pointing to in cur
+	cur[curcounter]=0; 
 	parsed[0]=0;
-	if(!line){
+	if (!(parsed&&cur)) perror("Ran out of memory");;
+	if(!line){ //if nothing is in the line, we just free up everything
 		free(parsed);
 		free(cur);
 		free(line);
 	}
-	if (!(parsed&&cur)) perror("Ran out of memory");;
 
-	while (*line){
-		char c=line[0];
-		if(c==EOF){
+	while (*line){ //when there is still another character in the line buffer
+		char c=line[0]; //get the first character of line
+		if(c==EOF){ //just to make sure EOF is handled
 			*argcountptr=EOF;
 			free_list_of_strings(parsed);
 			free(original_line);
 			return NULL;
 		}
-		if(c=='"'){
-			for(line++;(c=line[0])!='"'&&c&&c!=EOF;line++){
+		if(c=='"' || c=='\'' ){ //when things are in quotes, we want them grouped together into one character array
+			char ch=c; 
+			for(line++;(c=line[0])!=ch&&c&&c!=EOF;line++){
 				cur[curcounter]=c;
 				curcounter++;
 				cur[curcounter]=0;
@@ -50,7 +51,7 @@ char** parse(int * argcountptr){
 				}
 			}
 		}
-		else if (c=='\n'){
+		else if (c=='\n'){ 
 			if(cur[0]){
 				parsed[counter]=cur;
 				counter++;
@@ -65,7 +66,21 @@ char** parse(int * argcountptr){
 			curcounter=0;
 			cur[0]=0;
 		}
-		else {
+		else if( c=='<' || c=='>' || c=='|' || c=='&'){ //we can do things like "cat <a.txt" or "cat meow.txt|grep ruff"! 
+            parsed[counter]=cur;
+            cur=malloc(sizeof(char)*(LINE_MAX+1));
+            if(!cur) perror("out of memory");
+            curcounter=0;
+            cur[0]=0;
+            counter++;
+            char* shortstring=malloc(sizeof(char)+1);
+            if(!shortstring) perror("out of memory");
+            shortstring[0]=c;
+            shortstring[1]=0;
+            parsed[counter]=shortstring;
+            counter++;
+        }
+		else { //all other normal boring characters aren't left out
 			cur[curcounter]=c;
 			curcounter++;
 			cur[curcounter]=0;		
@@ -327,6 +342,7 @@ int main() {
 		//printf("\n%d\n",getpid());
 		printf("%s",prompt);
 		char** strings=parse(&strcount);
+		printf("%d\n", strcount );
 		if(!strings) done=1;
 		else if(!strings[0]) ;
 		else if (!strcmp(strings[0],"exit")) done=1;
@@ -335,7 +351,6 @@ int main() {
 			if ( -1 == child ) {
 	    		perror("fork failed, I am sad");
 	    		return(2);
-
 			}
 			if(child){
 				int status;
