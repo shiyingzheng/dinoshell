@@ -318,7 +318,11 @@ pid_t execprocess(int strcount,char** strings){
 				}
 				dup2(newpipe[0],STDIN_FILENO);
 				int s=multipipe(groupcount-i,grouped+i,newpipe);
-				return s;
+				if(execvp(*command,command)){
+        			perror("");
+        			return(2);
+				}
+				return getpid();
 			//From kuperman: should have STDIN_FILENO of bar be reading from the STDOUT_FILENO of bar. 
 			//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
 			//Close the unused ends 
@@ -342,7 +346,7 @@ int main() {
 		//printf("\n%d\n",getpid());
 		printf("%s",prompt);
 		char** strings=parse(&strcount);
-		printf("%d\n", strcount );
+		//printf("%d\n", strcount );
 		if(!strings) done=1;
 		else if(!strings[0]) ;
 		else if (!strcmp(strings[0],"exit")) done=1;
