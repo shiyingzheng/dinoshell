@@ -77,23 +77,6 @@ char** parse(int * argcountptr){
 	*argcountptr=counter;
 	return parsed;
 }
-void child_handler(int sig){
-	printf("kill me");
-	pid_t pid=getpid();
-	kill(pid, SIGTERM);
-}
-void parent_handler(int sig){
-	signal(SIGINT,SIG_IGN);
-}
-void sig_handler(int sig){
-	if (sig==SIGINT) {
-		if(child)
-			signal(SIGINT,parent_handler);
-		else
-			signal(SIGINT,child_handler);
-	}//kill child
-	signal(sig, sig_handler);
-}
 void print_groups(char*** groups){
 	for(int i=0;groups[i];i++){
 		printf("[");
@@ -149,6 +132,56 @@ char*** grouping(int strcount, char** strings, int* groupcount){
 	grouped[group_num]=0;
 	*groupcount=group_num;
 	return grouped;
+}
+pid_t multipipe(int groupcount, char*** grouped, int pipe2[2]){
+			if(!grouped[0]){
+				return(0);
+			}
+			char** command;
+			command=grouped[0];
+			//print_strings(command);
+			//print_strings(command2);
+			int newpipe[2];
+			if (pipe(newpipe) == -1){
+  				perror ("pipe");
+  				return -1;
+			}
+			pid_t child2=fork();
+			if(child2==-1){
+				perror("fork failed, I am sad");
+    			return(2);
+			}
+			if(child2){
+				dup2(pipe2[0],STDIN_FILENO);
+				int status;
+				while(child2!=wait(&status)){
+					//printf("%d\n",status);
+					;
+				}
+				int ex=multipipe(groupcount-2,grouped+2,newpipe);
+
+					if (-1==ex) 
+					perror("Child process not successfully executed");
+					return(2);
+				pause();
+			}
+			else{
+				dup2(newpipe[1],STDOUT_FILENO);
+				if(execvp(*command,command)){
+    				perror("");
+    				return(2);
+    			}
+    			pause();
+				return getpid();
+			}
+			return getpid();
+		//From kuperman: should have STDIN_FILENO of bar be reading from the STDOUT_FILENO of bar. 
+		//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
+		//Close the unused ends 
+		//(e.g., foo should close the descriptor that bar is using to read). Your shell will need to exec both processes and wait for both of them to return.
+		//there's a very nice example here http://www6.uniovi.es/cscene/CS4/CS4-06.htmld
+//if command is not empty at the end, execute it
+//also, every time when executing stuff, check if there's any error, i.e. if exec returns -1, then we should perror.
 }
 pid_t execprocess(int strcount,char** strings){
     /*if(execvp(*strings,strings)){
@@ -263,23 +296,14 @@ pid_t execprocess(int strcount,char** strings){
 					fprintf(stderr, "%s\n", "No such file or directory");
 					return -1;
 				}
-				command2=grouped[i+1];
-				int filedes1[2],filedes2[2];
-				if (pipe(filedes1) == -1){
-      				perror ("pipe");
-      				return -1;
-    			}
-    			if (pipe(filedes2) == -1){
-      				perror ("pipe");
-      				return -1;
-    			}
-    			dup2(filedes1[1],filedes2[0]);
-				if(execvp(*command,command)){
-        			perror("");
-        			return(2);
+				int newpipe[2];
+				if(pipe(newpipe)==-1){
+					perror("pipe");
+					return -1;
 				}
-				pause();
-				return getpid();
+				dup2(newpipe[0],STDIN_FILENO);
+				int s=multipipe(groupcount-i,grouped+i,newpipe);
+				return s;
 			//From kuperman: should have STDIN_FILENO of bar be reading from the STDOUT_FILENO of bar. 
 			//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
 			//Close the unused ends 
@@ -295,8 +319,7 @@ pid_t execprocess(int strcount,char** strings){
 }
 int main() {
 	//Test the grouping method again before using it! Sorry I was too tired to do that. We also need a method to free memory from char***
-	
-	signal(SIGINT, sig_handler);
+	signal(SIGINT,SIG_IGN);
 	char* prompt="dinoshell: ";
 	int done=0;
 	int strcount;
@@ -325,9 +348,10 @@ int main() {
 					;
 				}
 				//}
-				child=0;
+				child=-1;
 			}
 			else {
+				signal(SIGINT,SIG_DFL);
 				int ex=execprocess(strcount,strings);
 				if (-1==ex) 
 					perror("Child process not successfully executed");
