@@ -1,3 +1,11 @@
 Shiying Zheng and Ben Stern
-hw10
+hw10 The DINOSHELL
 ===========================
+This is the first version. We will update to a complete version later.
+In this version, we have completed everything except piping and background running process.
+
+We also have extra things: 1) grouping arguments with double and single quotes, 2) taking care 
+of commands where before and after > or <, there are no spaces(unless the space is necessary. 
+It acts exactly the same as bash on this.)
+
+We will release a better dinoshell very soon. 
