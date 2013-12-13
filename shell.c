@@ -189,7 +189,6 @@ pid_t multipipe(int groupcount, char*** grouped, int pipe2[2]){
 			if (pipe(newpipe) == -1){
   				perror ("pipe");
   				return -1;
->>>>>>> f85eae2c9c62898b7c58f1ac8da5da277ded0fbe
 			}
 		}
 		while((command=grouped[2*i])!=NULL){
