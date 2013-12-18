@@ -132,7 +132,7 @@ void print_strings(char** strings){
  * Returns a pointer to an array of character array.
  */
 char*** grouping(int strcount, char** strings, int* groupcount){
-	char*** grouped=malloc(sizeof(char**)*(strcount+1));
+	char*** grouped=malloc(sizeof(char**)*(strcount+2));
 	//print_strings(strings);
 	int group_num=0;
 	int string_num=0;
@@ -168,59 +168,64 @@ char*** grouping(int strcount, char** strings, int* groupcount){
 	grouped[group_num][string_num]=0;
 	group_num++;//making a new group which should be null
 	grouped[group_num]=0;
+	grouped[group_num+1]=0;
 	*groupcount=group_num;
 	return grouped;
 }
 /*
- * This method is supposed to take care of multi-piping. It is now not working.
+ * This method is supposed to take care of multi-piping. 
  * Takes in an integer for the number of groups of strings, a pointer to an
  * 	array of strings as the groups, and an integer array that are used for piping.
  * Returns the child-id if exec fails.
  */
-/*pid_t multipipe(int groupcount, char*** grouped, int pipe2[2]){
-			if(!grouped[0]){
-				return(0);
-			}
-			char** command;
-			command=grouped[0];
-			//print_strings(command);
+pid_t multipipe(char*** grouped){
+		if(!grouped[0]){
+			return(0);
+		}
+		char** command;
+		command=grouped[0];
 			//print_strings(command2);
-			int newpipe[2];
+		int newpipe[2];
+		int fd_in=STDIN_FILENO;
+		int i=0;
+		pid_t child=0;
+
+		while((command=grouped[2*i])){ //test: 1. echo meow | grep t   2. echo meow | grep meow
+			//print_strings(command);
 			if (pipe(newpipe) == -1){
   				perror ("pipe");
   				return -1;
 			}
-		while((command=grouped[2*i])!=NULL){
-			if((child2=fork())==-1){
+			child=fork();
+			if(child==-1){
 				perror("");
 				return(2);
 			}
-			if(child2){
+			if(child){
+				//printf("ohhh");
 				int status;
-				while(child2!=wait(&status)){
+				while(child!=wait(&status)){
 					;
 				}
+				close(newpipe[1]);
+				fd_in=newpipe[0];
+				child=0;
 				i++;
 			}
 			else{
-				if(i!=0){
-					if(dup2(p[2*i-2],STDIN_FILENO)<0){
-						perror("");
-						return(2);
-					}
-				}
-				else if(i<(groupcount-1)/2){
-					if(dup2(p[2*i+1],STDOUT_FILENO)<0){
-						perror("");
-						return(2);
-					}
-				}
+				dup2(fd_in, STDIN_FILENO);
+				if (grouped[2*i+1])
+					dup2(newpipe[1],STDOUT_FILENO);
+				close(newpipe[0]);
 				//print_strings(command);
-				execvp(*command,command);
-				perror("");
+				if (execvp(*command,command)) {
+					perror("");
+					return(2);
+				}
+				pause();
+				return getpid();
 			}
 		}
-		free(p);
 		return getpid();
 		//From kuperman: should have STDIN_FILENO of bar be reading from the STDOUT_FILENO of bar. 
 		//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
@@ -228,7 +233,7 @@ char*** grouping(int strcount, char** strings, int* groupcount){
 		//(e.g., foo should close the descriptor that bar is using to read). Your shell will need to exec both processes and wait for both of them to return.
 		//if command is not empty at the end, execute it
 		//also, every time when executing stuff, check if there's any error, i.e. if exec returns -1, then we should perror.
-}*/
+}
 /*
  * Execute process.
  * Takes in an integer as the number of strings, and a pointer to character arrays.
@@ -321,62 +326,14 @@ pid_t execprocess(int strcount,char** strings){
 			//and clean the command
 			}
 			else if ( !strcmp(grouped[i][0], "|") ){
-				if(i<1){
-	            fprintf(stderr, "%s\n", "No such file or directory");
-	            return -1;
-	          }
-	          char** command2;
-	          command=grouped[i-1];
-	          if(!*command){
-	            fprintf(stderr, "%s\n", "No such file or directory");
-	            return -1;
-	          }
-	          if(!grouped[i+1]){
-	            fprintf(stderr, "%s\n", "No such file or directory");
-	            return -1;
-	          }
-	          command2=grouped[i+1];
-	          int filedes[2];
-	          if (pipe(filedes) == -1){
-	                perror ("pipe");
-	                return -1;
-	            }
-	            pid_t child2;
-	            if((child2=fork())==-1){
-	            	perror("");
-	            	return -1;
-	            }
-	            if(child2){
-	            	int status;
-	            	dup2(filedes[0],STDIN_FILENO);
-	            	close(filedes[1]);
-	            	//close(STDOUT_FILENO);
-	            	while(child2!=wait(&status)){
-	            		;
-	            	}
-	            	if(execvp(*command2,command2)){
-	            		perror("");
-		                return(2);
-	            	}
-	            }
-	            else{
-	            	dup2(filedes[1],STDOUT_FILENO);
-	            	close(filedes[0]);
-	            	//close(STDIN_FILENO);
-		          	if(execvp(*command,command)){
-		                perror("");
-		                return(2);
-		          	}
-		      	}
-	          	pause();
-	          	return getpid();
-
 			//From kuperman: should have STDIN_FILENO of bar be reading from the STDOUT_FILENO of bar. 
 			//You can do this by using pipe(2) to create connected pairs of file descriptors and then use dup2(2) to set them up appropriately in the children. 
 			//Close the unused ends 
 			//(e.g., foo should close the descriptor that bar is using to read). Your shell will need to exec both processes and wait for both of them to return.
 			//some ideas from http://www6.uniovi.es/cscene/CS4/CS4-06.html
-			}
+	          	multipipe(grouped);
+	          	return getpid();
+	        }
 		}
 	}
 	//if command is not empty at the end, execute it
